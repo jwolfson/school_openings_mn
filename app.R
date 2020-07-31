@@ -158,6 +158,9 @@ server <- function(input, output) {
         p(
             paste("While case numbers are available through", strftime(max(casedata$date), "%b %d, %Y"),
                   "we report 14-day totals through", strftime(last.accurate.day, "%b %d, %Y"), "as recent case numbers are more likely to be inaccurate.")
+        ),
+        p(
+            HTML("Source code for this app is available <a href='https://github.com/jwolfson/school_openings_mn'>on my GitHub site</a>.")
         )
     )
     
