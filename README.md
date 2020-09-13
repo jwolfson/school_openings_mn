@@ -2,6 +2,9 @@
 
 ## Updates
 
+**9/10/2020:** Weekly district update
+**9/3/2020:** Weekly district update
+**8/27/2020:** Weekly district update
 **8/20/2020:** Added "By School District" tab reporting 14-day total cases per 10,000 for each school district.
 
 ## Description
