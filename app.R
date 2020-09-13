@@ -151,6 +151,10 @@ makeCountyComparisonPlot <- function(allcounties) {
         ggtitle("")
 }
 
+makeDistrictComparisonPlot <- function(alldistricts) {
+    alldistricts %>% 
+        filter(!is.na(rate_last)) 
+}
 makeCountryPlot <- function(alldata, bypop) {
     
 
@@ -519,7 +523,12 @@ server <- function(input, output) {
               
               tags$i("total number of cases over the past 14 days per 10,000 residents"),
               
-              ". The purpose of this app is to display this key metric for each county and school district in Minnesota.")
+              ". The purpose of this app is to display this key metric for each county and school district in Minnesota."),
+            hr(),
+            p(tags$b("NOTE:"), "The reported rates in this app may differ from the ", a("14-day COVID-19 Case Rate by County Report (PDF)", href = "https://www.health.state.mn.us/diseases/coronavirus/stats/wschool.pdf"),
+              "provided by Minnesota Department of Health. In all cases, MDH data should be viewed as official.",
+              style = "font-size: 16px; color: #000099"),
+            actionLink("diffrates", "Click for more information", icon = icon("info"))
         )
         
     } else {
@@ -534,6 +543,7 @@ server <- function(input, output) {
               tags$i("total number of cases over the past 14 days per 10,000 residents"),
               
               ". The purpose of this app is to display this key metric for each county and school district in Minnesota."),
+            hr(),
             p(HTML("<b>NOTE:</b> The state has proposed using <i>county</i>-level metrics to make decisions on school status.
                 School district level estimates are less accurate, and are provided for information purposes only."),
               style = "font-size: 16px; color: #000099")
@@ -583,6 +593,18 @@ server <- function(input, output) {
         }
         
     })
+    
+    observeEvent(input$diffrates,
+                 showModal(modalDialog(
+                     size = "l",
+                     title = "Why do these numbers not match MDH's?",
+                     HTML("There are two main differences between the official MDH rates and those reported on the dashboard:</p>
+<ol>
+<li> MDH reports case counts by the date of specimen collection, so their official case counts are delayed by 2 weeks to ensure that all test results for specimens collected during a given date range have been included. This dashboard uses the daily data on new cases, regardless of date of specimen collection. Daily case data are more sensitive to emerging trends but do not fully reflect the state of the epidemic on a given date.
+<li>This dashboard uses projected 2019 county populations (provided by the U.S. Census), while it appears that MDH are using 2010 Census population data. So, per-capita rates on this dashboard will be lower (about 6% lower on average for the state of Minnesota) for the same case count.
+                     </ol>")
+)))
+    
 }
 
 # Run the application 
