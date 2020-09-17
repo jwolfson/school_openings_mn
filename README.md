@@ -2,6 +2,10 @@
 
 ## Updates
 
+**9/17/2020:** 
+- Weekly district update
+- Fixed bug in state comparison plot
+
 **9/10/2020:** Weekly district update
 
 **9/3/2020:** Weekly district update
