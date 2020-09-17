@@ -159,7 +159,7 @@ makeCountryPlot <- function(alldata, bypop) {
     
 
     if(bypop) {
-        alldata %>% filter(!is.na(rate_last)) %>%
+        alldata %>% filter(!is.na(rate_last), date == latest.day) %>%
         group_by(state, school_opening_status) %>%
         summarise(n_status = sum(pop)) %>%
         ungroup() %>%
@@ -181,11 +181,18 @@ makeCountryPlot <- function(alldata, bypop) {
               axis.text.y = element_text(vjust = 0.2),
               panel.grid.major.y = element_blank())
     } else {
-        alldata %>% filter(!is.na(rate_last)) %>%
-            mutate(state = fct_reorder(state, school_opening_status, function(x) mean(x=="All In-Person", na.rm = TRUE)),
-                   school_opening_status = fct_rev(school_opening_status)) %>%
-            ggplot(aes(x = state, fill = school_opening_status)) +
-            geom_bar(position = "fill", aes(alpha = (state == STATE)), show.legend = FALSE) + 
+        alldata %>% filter(!is.na(rate_last), date == latest.day) %>%
+            group_by(state, school_opening_status) %>%
+            summarise(n_status = n()) %>%
+            ungroup() %>%
+            group_by(state) %>%
+            mutate(pct_status = n_status / sum(n_status)) %>%
+            ungroup() %>%
+            mutate(state = fct_reorder(state, pct_status, .fun = first),
+                   school_opening_status = fct_rev(school_opening_status)) %>% 
+            ggplot(aes(x = state, y = pct_status, fill = school_opening_status)) +
+            geom_bar(stat = "identity", position = "stack",
+                     aes(alpha = (state == STATE)), show.legend = FALSE) + 
             scale_fill_brewer(palette = "RdYlGn", drop = FALSE ) +
             scale_alpha_manual(values = c(0.3, 0.7)) +
             scale_y_continuous(labels = scales::percent) +
