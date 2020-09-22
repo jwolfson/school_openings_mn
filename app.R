@@ -17,8 +17,20 @@ library(bootstraplib)
 library(forcats)
 library(shinycssloaders)
 library(shinyWidgets)
+library(thematic)
+library(showtext)
 
-bs_theme_new(version = "4+3", bootswatch = "sketchy")
+#font_add_google("Neucha", "Cabin Sketch")
+
+shinyOptions(bootstraplib = TRUE)
+#thematic_on(font = "auto")
+#shiny::onStop(thematic_off)
+
+bs_theme_new(bootswatch = "sketchy")
+#bs_theme_new()
+#bs_theme_fonts(base = "Nanum Pen Script", heading = "Cabin Sketch")
+thematic::thematic_shiny(font = "auto")
+shiny::onStop(thematic_off)
 
 LAG_DAYS <- 14
 POP_DENOM <- 10000
@@ -66,8 +78,12 @@ casedata_district <- casedata_district %>% mutate(unreliable_data = FALSE)
 
 makeCountyPlot <- function(countydata) {
     countydata %>%
+    mutate(label = sprintf("%s County\n%s\n14-day total per 10k: %.1f",
+                           county,
+                           strftime(date, "%b %d, %Y"),
+                           rate_last)) %>%
         ggplot(aes(x = date)) + 
-        geom_line(show.legend = FALSE, aes(y = rate_last, linetype = unreliable_data)) +
+        geom_line(show.legend = FALSE, aes(y = rate_last, linetype = unreliable_data, text = label)) +
 #        geom_point(aes(y = rate_last_ci_upper), shape = 18) +
         geom_ribbon(aes(ymin = rate_last_ci_lower, ymax = rate_last_ci_upper), fill = "black", alpha = 0.1) +
         geom_point(show.legend = FALSE, aes(y = rate_last, shape = unreliable_data), size = 2) +
@@ -81,14 +97,18 @@ makeCountyPlot <- function(countydata) {
         scale_x_date(date_breaks = "2 weeks", date_labels = "%b %d") +
         scale_shape_manual(values = c(16, NA)) +
         scale_linetype_manual(values = c("solid", "dashed")) +
+        scale_y_continuous(breaks = c(0, 10, 20, 30, 50)) +
         coord_cartesian(xlim = c(first.day - 3, latest.day + 3), 
                         ylim = c(0,MAX_Y),
                         expand = 0) +
         scale_fill_brewer(name = "", palette = "RdYlGn", direction = -1) +
         ylab(sprintf("Total cases in past %d days\nper %s population", LAG_DAYS, comma(POP_DENOM, digits = 0))) +
-        xlab("Date") +
-        theme_minimal(base_size = 16) +
-        theme(legend.position = "bottom")
+        xlab(NULL) +
+        #theme_minimal() +
+        theme(legend.position = "bottom",
+              axis.title = element_text(size = 16),
+              axis.text = element_text(size = 14),
+              legend.text = element_text(size = 14))
 }
 
 makeDistrictPlot <- function(districtdata) {
@@ -121,18 +141,26 @@ makeDistrictPlot <- function(districtdata) {
                           drop = FALSE,
                           name = "") +
         scale_x_date(breaks = districtdata$date, date_labels = "Week ending\n%b %d") +
+      scale_y_continuous(breaks = c(0, 10, 20, 30, 50)) +
         coord_cartesian(xlim = c(min(districtdata$date) - 7, max(districtdata$date) + 7),
                         ylim = c(0, MAX_Y)) +
         ylab(sprintf("Total cases in past %d days\nper %s population", LAG_DAYS, comma(POP_DENOM, digits = 0))) +
         xlab(NULL) +
-        theme_minimal(base_size = 16) +
-        theme(legend.position = "bottom")
+        #theme_minimal(base_size = 16) +
+        theme(legend.position = "bottom",
+              axis.title = element_text(size = 16),
+              axis.text = element_text(size = 14),
+              legend.text = element_text(size = 14))
 }
 
 makeCountyComparisonPlot <- function(allcounties) {
     allcounties %>% 
         filter(!is.na(rate_last)) %>%
-        ggplot(aes(x = county, y = rate_last, fill = school_opening_status)) +
+        mutate(label = sprintf("%s County\n%.1f\n%s",
+                               county,
+                               rate_last,
+                               school_opening_status)) %>%
+        ggplot(aes(x = county, y = rate_last, fill = school_opening_status, text = label)) +
         geom_bar(stat = "identity",  
                  aes(color = highlighted,
                      alpha = highlighted),
@@ -141,20 +169,29 @@ makeCountyComparisonPlot <- function(allcounties) {
                           guide = guide_legend(override.aes = list(alpha = 0.3))) +
         scale_color_manual(values = c(NA, "black"), guide = NULL) +
         scale_alpha_manual(values = c(0.3, 0.7), guide = NULL) +
+        scale_y_continuous(breaks = c(0, 10, 20, 30, 50)) +
+        coord_cartesian(ylim = c(0,MAX_Y)) +
         ylab(sprintf("Total cases in past %d days\nper %s population", LAG_DAYS, comma(POP_DENOM, digits = 0))) +
         xlab(NULL) +
-        theme_minimal(base_size = 16) +
+        #theme_minimal(base_size = 16) +
         theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5,
-                                         size = 10),
+                                         size = 10,
+                                         family = "Neucha"),
+              axis.text.y = element_text(size = 12,
+                                         family = "Neucha"),
               panel.grid.major.x = element_blank(),
-              legend.position = "bottom") +
+#              legend.position = "bottom",
+              legend.position = "none",
+              axis.title = element_text(size = 14, 
+                                        family = "Neucha"),
+              #legend.text = element_text(size = 14),
+              panel.background = element_blank(),
+              panel.grid.major.y = element_line(color = gray(0.95))
+              ) +
         ggtitle("")
 }
 
-makeDistrictComparisonPlot <- function(alldistricts) {
-    alldistricts %>% 
-        filter(!is.na(rate_last)) 
-}
+
 makeCountryPlot <- function(alldata, bypop) {
     
 
@@ -167,8 +204,9 @@ makeCountryPlot <- function(alldata, bypop) {
         mutate(pct_status = n_status / sum(n_status)) %>%
         ungroup() %>%
         mutate(state = fct_reorder(state, pct_status, .fun = first),
-               school_opening_status = fct_rev(school_opening_status)) %>% 
-        ggplot(aes(x = state, y = pct_status, fill = school_opening_status)) +
+               school_opening_status = fct_rev(school_opening_status),
+               label = sprintf("%s\n%s: %d%%", state, school_opening_status, round(100*pct_status))) %>% 
+        ggplot(aes(x = state, y = pct_status, fill = school_opening_status, text = label)) +
         geom_bar(stat = "identity", position = "stack", aes(alpha = (state == STATE)), show.legend = FALSE) + 
         scale_fill_brewer(palette = "RdYlGn", drop = FALSE ) +
         scale_alpha_manual(values = c(0.3, 0.7)) +
@@ -176,9 +214,12 @@ makeCountryPlot <- function(alldata, bypop) {
         ylab("Percentage of population") +
         xlab(NULL) +
         coord_flip(expand = FALSE, ylim = c(0,1.01)) +
-        theme_minimal(base_size = 16) +
+        #theme_minimal(base_size = 16) +
         theme(legend.position = "none",
-              axis.text.y = element_text(vjust = 0.2),
+              axis.title = element_text(family = "Neucha", size = 14),
+              axis.text.x = element_text(family = "Neucha", size = 14),
+              axis.text.y = element_text(vjust = 0.2, family = "Neucha", size = 10),
+              panel.background = element_blank(),
               panel.grid.major.y = element_blank())
     } else {
         alldata %>% filter(!is.na(rate_last), date == latest.day) %>%
@@ -189,8 +230,9 @@ makeCountryPlot <- function(alldata, bypop) {
             mutate(pct_status = n_status / sum(n_status)) %>%
             ungroup() %>%
             mutate(state = fct_reorder(state, pct_status, .fun = first),
-                   school_opening_status = fct_rev(school_opening_status)) %>% 
-            ggplot(aes(x = state, y = pct_status, fill = school_opening_status)) +
+                   school_opening_status = fct_rev(school_opening_status),
+                   label = sprintf("%s\n%s: %d%%", state, school_opening_status, round(100*pct_status))) %>% 
+            ggplot(aes(x = state, y = pct_status, fill = school_opening_status, text = label)) +
             geom_bar(stat = "identity", position = "stack",
                      aes(alpha = (state == STATE)), show.legend = FALSE) + 
             scale_fill_brewer(palette = "RdYlGn", drop = FALSE ) +
@@ -199,18 +241,24 @@ makeCountryPlot <- function(alldata, bypop) {
             ylab("Percentage of counties") +
             xlab(NULL) +
             coord_flip(expand = FALSE, ylim = c(0,1.01)) +
-            theme_minimal(base_size = 16) +
+            #theme_minimal(base_size = 16) +
             theme(legend.position = "none",
-                  axis.text.y = element_text(vjust = 0.2),
-                  panel.grid.major.y = element_blank())
+                  axis.text.y = element_text(vjust = 0.2, family = "Neucha", size = 10),
+                  axis.text.x = element_text(family = "Neucha", size = 14),
+                  axis.title = element_text(family = "Cabin Sketch", size = 14),
+                  panel.grid.major.y = element_blank(),
+                  panel.background = element_blank())
     }
     
 }
 
 # Define UI for application that draws a histogram
 ui <- function(request) {
+  
     fluidPage(
     bootstrap(),
+    tags$link(href="https://fonts.googleapis.com/css?family=Cabin+Sketch|Neucha&display=swap", rel="stylesheet"),
+    #tags$link(href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap", rel="stylesheet"),
     tags$head(
         tags$style(HTML("hr {border-top: 1px solid #000000;}
                          .fineprint {font-size: 9pt}
@@ -251,21 +299,21 @@ ui <- function(request) {
                     ),
                     fluidRow(
                         column(12,
-                               withSpinner(plotOutput("opening"), type = 5, color = "#DAE6FF")
+                               withSpinner(plotOutput("opening"), type = 5, color = "#DAE6FF"),
                         )
                     ),
                     fluidRow(
                         column(12,
                                h3("County Comparison"),
                                h6("How Minnesota's counties compare"),
-                               withSpinner(plotOutput("compare_counties"), type = 5, color = "#DAE6FF")
+                               withSpinner(plotlyOutput("compare_counties"), type = 5, color = "#DAE6FF")
                         )
                     ),
                     fluidRow(
                         column(12,
                                h2("U.S. Comparison"),
                                h5("How each state's counties stack up using Minnesota's school opening guidance"),
-                               withSpinner(plotOutput("compare_us", height = "700px"), type = 5, color = "#DAE6FF")
+                               withSpinner(plotlyOutput("compare_us", height = "700px"), type = 5, color = "#DAE6FF")
                         )
                     ),
                     fluidRow(
@@ -365,14 +413,14 @@ server <- function(input, output) {
         suppressWarnings(district_data() %>% makeDistrictPlot())
     })
     
-    output$compare_counties <- renderPlot({
+    output$compare_counties <- renderPlotly({
         req(input$county)
-            current_county_rates() %>% makeCountyComparisonPlot()
+            current_county_rates() %>% makeCountyComparisonPlot() %>% ggplotly(tooltip = "text")
     })
     
-    output$compare_us <- renderPlot({
-        req(input$county)
-            casedata %>% makeCountryPlot(bypop = input$bypop)
+    output$compare_us <- renderPlotly({
+        #req(input$county)
+            casedata %>% makeCountryPlot(bypop = input$bypop) %>% ggplotly(tooltip = "text")
     })
     
     output$countyselect <- renderUI( {
@@ -614,5 +662,6 @@ server <- function(input, output) {
     
 }
 
+#thematic_shiny()
 # Run the application 
 shinyApp(ui = ui, server = server, enableBookmarking = "url")
