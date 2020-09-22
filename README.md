@@ -2,6 +2,10 @@
 
 ## Updates
 
+**9/22/2020:** 
+- Add interactivity to some plots using `plotly`
+- Implement `thematic` package to get nicer plot labeling
+
 **9/17/2020:** 
 - Weekly district update
 - Fixed bug in state comparison plot
