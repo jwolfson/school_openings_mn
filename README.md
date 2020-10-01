@@ -2,7 +2,7 @@
 
 ## Updates
 
-**10/1/2020:** Weekliy district update
+**10/1/2020:** Weekly district update
 
 **9/24/2020:** Weekly district update
 
