@@ -2,6 +2,10 @@
 
 ## Updates
 
+**10/1/2020:** Weekliy district update
+
+**9/24/2020:** Weekly district update
+
 **9/22/2020:** 
 - Add interactivity to some plots using `plotly`
 - Implement `thematic` package to get nicer plot labeling
