@@ -300,6 +300,7 @@ ui <- function(request) {
             hr(),
             uiOutput("background"),
             uiOutput("fineprint"),
+            uiOutput("about")
         ),
         
         # Show a plot of the generated distribution
@@ -665,10 +666,8 @@ server <- function(input, output, session) {
                     p(
                         HTML("Case numbers are obtained from the <a href='https://github.com/nytimes/covid-19-data'>
             New York Times Coronavirus GitHub data repository</a>, and will update whenever that data source does (at least daily)." )),
-                    p("Shaded areas in the top plot give 95% confidence intervals for the 14-day case total per 10,000 people."),
-                    p(
-                        HTML("Source code for this app is available <a href='https://github.com/jwolfson/school_openings_mn'>on my GitHub site</a>.")
-                    )
+                    p("Shaded areas in the top plot give 95% confidence intervals for the 14-day case total per 10,000 people.")
+                    
                 )
             )
             
@@ -685,14 +684,23 @@ server <- function(input, output, session) {
                         HTML("ZIP code populations are obtained from <a href='https://www.unitedstateszipcodes.org/zip-code-database/'>UnitedStatesZipCodes.org</a>")
                     ),
                     p("Mappings between ZIP codes and school districts are obtained from Minnesota Department of Education data."),
-                    p(
-                        HTML("Source code for this app is available <a href='https://github.com/jwolfson/school_openings_mn'>on my GitHub site</a>.")
-                    )
                 )
             )
             
         }
         
+    })
+    
+    output$about <- renderUI({
+      tagList(
+        hr(),
+        h6("About"),
+        div(class="fineprint",
+        p(HTML("I am a faculty member in the <a href='https://www.sph.umn.edu/academics/divisions/biostatistics/'>Division of Biostatistics</a> within the <a href='http://www.sph.umn.edu/'>University of Minnesota School of Public Health</a>. <a href='http://z.umn.edu/julianw'>More about me</a>.")),
+        p(HTML("For questions, contact <b>julianw@umn.edu</b>.")),
+        p(HTML("This app is built using <a href='https://shiny.rstudio.com/'>R Shiny</a>. Source code is available <a href='https://github.com/jwolfson/school_openings_mn'>on my GitHub site</a>.")
+        ))
+      )
     })
     
     observeEvent(input$diffrates,
