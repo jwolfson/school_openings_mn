@@ -61,7 +61,10 @@ casedata <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/ma
                                        c(-Inf, STATUS_CUTOFFS, Inf),
                                        labels = STATUS_LABELS))
 
-casedata_district <- read_csv("district_cases.csv")
+casedata_district <- read_csv("district_cases.csv") %>%
+  mutate(school_opening_status = cut(rate_last,
+                              c(-Inf, STATUS_CUTOFFS, Inf),
+                              labels = STATUS_LABELS))
 
 opening_status <- data.frame(x = rep(c(ymd("2020-01-01"), ymd("2030-01-01")), each = length(STATUS_LABELS)),
                              ymin = rep(c(0, STATUS_CUTOFFS), 2),
@@ -78,8 +81,17 @@ last.accurate.day <- latest.day
 casedata <- casedata %>% mutate(unreliable_data = (date > last.accurate.day))
 casedata_district <- casedata_district %>% mutate(unreliable_data = FALSE)
 
+# testPlot <- function() {
+#   high_districts <- casedata_district %>% group_by(name) %>% arrange(date) %>% summarize(current_rate = last(rate_last)) %>%
+#     ungroup() %>% arrange(desc(current_rate)) %>% slice(1:25)
+#   
+#   casedata_district %>% filter(name %in% high_districts$name) %>%
+#     ggplot(aes(x = date, y = rate_last, group = name)) + geom_line()
+#   
+# }
+
 makeCountyPlot <- function(countydata) {
-    countydata %>%
+  countydata %>%
     mutate(label = sprintf("%s County\n%s\n14-day total per 10k: %.1f\n(95%% CI: %.1f-%.1f)",
                            county,
                            strftime(date, "%b %d, %Y"),
@@ -169,6 +181,33 @@ makeDistrictPlot <- function(districtdata) {
           legend.text = element_text(family = "Neucha", size = 12))
 }
 
+makeDistrictGauge <- function(districtdata) {
+  status_colors <- rev(paste0(brewer.pal(length(STATUS_LABELS), "RdYlGn"), "99"))
+  delta <- last(diff(districtdata$rate_last))
+  
+  plot_ly(
+    domain = list(x = c(0, 1), y = c(0, 1)),
+    value = round(last(districtdata$rate_last), 1),
+    title = list(text = "14-day case rate per 10,000",
+                 font = list(size = 18)),
+    type = "indicator",
+    mode = "gauge+number+delta",
+    delta = list(reference = round(nth(districtdata$rate_last, -2), 1),
+                 increasing = list(color = substr(status_colors[5],1,7)),
+                 decreasing = list(color = substr(status_colors[1],1,7))),
+    gauge = list(
+      axis =list(range = list(NULL, 80),
+                 tickvals = list(0, 10, 20, 30, 50)),
+      bar = list(color = "#00000099"),
+      steps = list(
+        list(range = c(0, STATUS_CUTOFFS[1]), color = status_colors[1]),
+        list(range = c(STATUS_CUTOFFS[1], STATUS_CUTOFFS[2]), color = status_colors[2]),
+        list(range = c(STATUS_CUTOFFS[2], STATUS_CUTOFFS[3]), color = status_colors[3]),
+        list(range = c(STATUS_CUTOFFS[3], STATUS_CUTOFFS[4]), color = status_colors[4]),
+        list(range = c(STATUS_CUTOFFS[4], 80), color = status_colors[5])))
+    ) 
+}
+
 makeCountyComparisonPlot <- function(allcounties) {
     allcounties %>% 
         filter(!is.na(rate_last)) %>%
@@ -207,6 +246,43 @@ makeCountyComparisonPlot <- function(allcounties) {
         ggtitle("")
 }
 
+makeDistrictComparisonPlot <- function(alldistricts) {
+  alldistricts %>% 
+    filter(!is.na(rate_last)) %>%
+    mutate(label = sprintf("%s\n%.1f\n%s\n(Click for details)",
+                           name,
+                           rate_last,
+                           school_opening_status)) %>%
+    ggplot(aes(x = name, y = rate_last, color = school_opening_status, alpha = highlighted,
+               text = label)) +
+    geom_point(aes(size = highlighted, alpha = highlighted), shape = 15) +
+    geom_linerange(aes(ymin = rate_last_ci_lower, ymax = rate_last_ci_upper,
+                       size = highlighted,
+                       alpha = highlighted)) +
+    scale_color_brewer(name = "", palette = "RdYlGn", direction = -1, drop = FALSE, 
+                      guide = guide_legend(override.aes = list(alpha = 0.3))) +
+    scale_size_manual(values = c(1, 3), guide = NULL) +
+    scale_alpha_manual(values = c(0.5, 1), guide = NULL) +
+    scale_y_continuous(breaks = c(0, 10, 20, 30, 50)) +
+    #coord_cartesian(ylim = c(0,MAX_Y)) +
+    ylab(sprintf("Total cases in past %d days\nper %s population", LAG_DAYS, comma(POP_DENOM, digits = 0))) +
+    xlab(NULL) +
+    #theme_minimal(base_size = 16) +
+    theme(axis.text.x = element_blank(),
+          axis.text.y = element_text(size = 12,
+                                     family = "Neucha"),
+          axis.ticks.x = element_blank(),
+          panel.grid.major.x = element_blank(),
+          #              legend.position = "bottom",
+          legend.position = "none",
+          axis.title = element_text(size = 14, 
+                                    family = "Cabin Sketch"),
+          #legend.text = element_text(size = 14),
+          panel.background = element_rect(fill = gray(0.85)),
+          panel.grid.major.y = element_line(color = gray(0.75))
+    ) +
+    ggtitle("")
+}
 
 makeCountryPlot <- function(alldata, bypop) {
     
@@ -343,16 +419,30 @@ ui <- function(request) {
                 tabPanel(title = "By School District", value = "district",
                          fluidRow(
                              column(6,
-                                    uiOutput("district_info_1")),
+                                    uiOutput("district_info_1"),
+                                    uiOutput("district_info_2")),
                              column(6, align = "right",
-                                    uiOutput("district_info_2"))
+                                      plotlyOutput("districtgauge", height = "225px", inline = TRUE)
+                                      )#,
+                                    #fluidRow(
+                                    #  uiOutput("district_info_2")
+                                    #)
+                                    #)
                          ),
                          fluidRow(
                              column(12,
-                                    withSpinner(plotlyOutput("opening_district"), type = 5, color = "#DAE6FF"),
-                                    p("For districts containing ZIP codes with <= 5 cases, vertical bars give the range of 14-day per 10,000 case totals that are consistent with reported case data. Outer shaded region indicates 95% confidence intervals for the (range of) case rates."),
+                                      withSpinner(plotlyOutput("opening_district"), type = 5, color = "#DAE6FF"),
+                                      p("For districts containing ZIP codes with <= 5 cases, vertical bars give the range of 14-day per 10,000 case totals that are consistent with reported case data. Outer shaded region indicates 95% confidence intervals for the (range of) case rates."),
                              )
-                         ))
+                         ),
+                         fluidRow(
+                           column(12,
+                                  h3("District Comparison"),
+                                  h6("How Minnesota school districts compare"),
+                                  withSpinner(plotlyOutput("compare_districts"), type = 5, color = "#DAE6FF")
+                           )
+                         )
+                )
             )
         )
     )
@@ -395,7 +485,7 @@ server <- function(input, output, session) {
                        pop = NA,
                        unreliable_data = (date > last.accurate.day)))
         }
-        dat
+        dat %>% filter(rate_last >= 0 & !is.nan(rate_last_ci_lower) & !is.nan(rate_last_ci_upper))
     })
     
     district_data <- reactive({
@@ -419,6 +509,12 @@ server <- function(input, output, session) {
                    highlighted = (county %in% input$county))
     })
     
+    current_district_rates <- reactive({
+      casedata_district %>%
+        filter(date == max(date)) %>%
+        mutate(name = fct_reorder(name, rate_last),
+               highlighted = (name %in% input$district))
+    })
     
     output$opening <- renderPlotly({
         req(input$county)
@@ -432,10 +528,21 @@ server <- function(input, output, session) {
     output$opening_district <- renderPlotly({
         req(input$district)
         suppressWarnings(district_data() %>% makeDistrictPlot()) %>% ggplotly(tooltip = "text") %>%
-          layout(legend = list(orientation = "h", x = 0, y = -0.2,
+          layout(margin = list(t=0),
+                 legend = list(orientation = "h", x = 0, y = -0.2,
                                font = list(family = "Neucha"))) %>%
           plotly::style(hoverlabel = list(font = list(family = "Neucha", size = 12),
                                           bgcolor = "#000099"))
+    })
+    
+    output$districtgauge <- renderPlotly({
+      req(input$district)
+      district_data() %>% makeDistrictGauge() %>%
+        layout(
+          width = 350,
+          height = 200,
+          margin = list(l=50,r=50,b=0,t=0, pad = 0, autosize = FALSE),
+               font = list(family = "Neucha"))
     })
     
     output$compare_counties <- renderPlotly({
@@ -443,6 +550,13 @@ server <- function(input, output, session) {
         req(input$county)
             current_county_rates() %>% makeCountyComparisonPlot() %>% ggplotly(tooltip = "text", source = "countycompare") %>%
                 plotly::style(hoverlabel = list(font = list(family = "Neucha", size = 12)))
+    })
+
+    output$compare_districts <- renderPlotly({
+      req(input$district)
+      current_district_rates() %>% makeDistrictComparisonPlot() %>% 
+        ggplotly(tooltip = "text", source = "districtcompare") %>%
+        plotly::style(hoverlabel = list(font = list(family = "Neucha", size = 12)))
     })
     
     output$compare_us <- renderPlotly({
@@ -584,29 +698,29 @@ server <- function(input, output, session) {
         
         if(caserate != caserate_max) {
           tagList(
-            h3(paste0("As of ", strftime(max(dd$date), "%B %d, %Y"), ":"),
+            h3(paste0("Data as of ", strftime(max(dd$date), "%B %d, %Y"), ""),
                style = "color:#999999"),
-            h4(sprintf("%d-day case rate per %s: %.1f-%.1f", 
-                       LAG_DAYS, 
-                       comma(POP_DENOM, digits = 0), 
-                       round(caserate,1),
-                       round(caserate_max, 1)),
-               style = "color:#99CC99"),
-            h4(paste0("Guideline Status: ", status),
-               style = "color:#9999FF")
+            # h4(sprintf("%d-day case rate per %s: %.1f-%.1f", 
+            #            LAG_DAYS, 
+            #            comma(POP_DENOM, digits = 0), 
+            #            round(caserate,1),
+            #            round(caserate_max, 1)),
+            #    style = "color:#99CC99"),
+            #h4(paste0("Guideline Status: ", status),
+            #   style = "color:#9999FF")
             
           )
         } else {
           tagList(
-            h3(paste0("As of ", strftime(max(dd$date), "%B %d, %Y"), ":"),
+            h3(paste0("Data as of ", strftime(max(dd$date), "%B %d, %Y"), ""),
                style = "color:#999999"),
-            h4(sprintf("%d-day case rate per %s: %.1f", 
-                       LAG_DAYS, 
-                       comma(POP_DENOM, digits = 0), 
-                       round(caserate,1)),
-               style = "color:#99CC99"),
-            h4(paste0("Guideline Status: ", status),
-               style = "color:#9999FF")
+            # h4(sprintf("%d-day case rate per %s: %.1f", 
+            #            LAG_DAYS, 
+            #            comma(POP_DENOM, digits = 0), 
+            #            round(caserate,1)),
+            #    style = "color:#99CC99"),
+            #h4(paste0("Guideline Status: ", status),
+            #   style = "color:#9999FF")
           )
             
         }
@@ -721,6 +835,15 @@ server <- function(input, output, session) {
         updateSelectInput(session, "county", selected = ordered.counties[ed$x])
         
     })
+    
+    observeEvent(event_data('plotly_click', source = "districtcompare"), {
+      
+      ed <- event_data('plotly_click', source = "districtcompare", session = session)
+      ordered.districts <- current_district_rates() %>% arrange(name) %>% pull(name)
+      updateSelectInput(session, "district", selected = ordered.districts[ed$x])
+      
+    })
+    
     
     
 }
