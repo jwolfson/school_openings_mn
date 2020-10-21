@@ -10,6 +10,15 @@ You can view the app at http://jwolfson.shinyapps.io/school_openings
 
 ## Updates
 
+**10/20/2020:**
+- Add option to display official & projected MDH rates on county plots
+
+**10/15/2020:**
+- Weekly district update
+- Add gauge on district pages showing current 14-day case rate, plus trend
+
+**10/8/2020:** Weekly district update
+
 **10/1/2020:** Weekly district update
 
 **9/24/2020:** Weekly district update
