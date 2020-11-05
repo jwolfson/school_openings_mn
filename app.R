@@ -689,6 +689,7 @@ ui <- function(request) {
                                       fluidRow(
                                                div(uiOutput("show_mdh_checkbox", style = "padding-left:30px; color: #EEEEEE; width: 200px")),
                                                div(uiOutput("show_forecast_checkbox"), style = "padding-left:20px; color: #EEEEEE; width: 250px"))
+                                        #column(12, style = "color:#EEEEEE; margin-top:10px; padding-left:20px",
                                ),
                                column(4, align = "right", style = "padding:10px; background-color:#444444; margin-bottom:0px; border-radius: 0px 0px 30px",
                                       plotlyOutput("countygauge", height = "175px", inline = FALSE)
