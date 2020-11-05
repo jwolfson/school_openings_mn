@@ -687,11 +687,8 @@ ui <- function(request) {
                                         style = "color:#FFFFFF"
                                         ),
                                       fluidRow(
-                                        column(6, style = "color:#EEEEEE; margin-top:10px",
-                                                    uiOutput("show_mdh_checkbox")
-                                               ),
-                                        column(6, style = "color:#EEEEEE; margin-top:10px",
-                                               uiOutput("show_forecast_checkbox")))
+                                               div(uiOutput("show_mdh_checkbox", style = "padding-left:30px; color: #EEEEEE; width: 200px")),
+                                               div(uiOutput("show_forecast_checkbox"), style = "padding-left:20px; color: #EEEEEE; width: 250px"))
                                ),
                                column(4, align = "right", style = "padding:10px; background-color:#444444; margin-bottom:0px; border-radius: 0px 0px 30px",
                                       plotlyOutput("countygauge", height = "175px", inline = FALSE)
@@ -827,11 +824,11 @@ server <- function(input, output, session) {
       #              status = "primary", 
       #              fill = TRUE)
     } else {
-      materialSwitch(
+      prettySwitch(
         inputId = "multizip",
         label = "Select/combine zips", 
         value = FALSE,
-        right = TRUE,
+        slim = TRUE,
         status = "primary"
       )
       
@@ -1221,7 +1218,7 @@ server <- function(input, output, session) {
     
     makeCountyGauge(cd) %>%
       layout(
-        margin = list(l=20,r=0,b=10,t=40, autosize = FALSE),
+        margin = list(l=20,r=20,b=10,t=40, autosize = FALSE),
         font = list(family = "Neucha", color = "#FFFFFF"),
         paper_bgcolor="#444444") %>%
       config(displayModeBar = FALSE)
@@ -1234,7 +1231,7 @@ server <- function(input, output, session) {
     
     makeDistrictGauge(dd) %>%
       layout(
-        margin = list(l=20,r=0,b=10,t=40, autosize = FALSE),
+        margin = list(l=20,r=20,b=10,t=40, autosize = FALSE),
         font = list(family = "Neucha", color = "#FFFFFF"),
         paper_bgcolor="#444444") %>%
       config(displayModeBar = FALSE)
