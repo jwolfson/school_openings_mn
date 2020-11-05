@@ -17,3 +17,11 @@ rsconnect/shinyapps.io/jwolfson/school_openings.dcf
 wright_county.R
 zip_code_database.csv
 .Rhistory
+countypop.csv
+countypop_allstates.csv
+district_zips.R
+mdh_district_data.txt
+mn_districts_zip.csv
+predict_state_numbers.R
+projections.R
+school_district_zip_codes.csv
